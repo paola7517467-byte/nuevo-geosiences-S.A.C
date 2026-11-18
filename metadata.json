@@ -1,0 +1,8 @@
+{
+  "name": "Remix GEOCIENCES S.A.C. - Portal Corporativo y Control de Cargos",
+  "description": "Sistema corporativo con autenticación Google OAuth, autorización por lista institucional y validación backend de contraseñas de cargos para GEOCIENCES S.A.C.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

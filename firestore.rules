@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'isAuthorized']) &&
+             data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'isAuthorized', 'authorizedRole', 'updatedAt']) &&
+             data.uid is string && data.uid.size() <= 128 && data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.isAuthorized is bool &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 512)) &&
+             (!('authorizedRole' in data) || (data.authorizedRole is string && data.authorizedRole.size() <= 32)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['userId', 'userEmail', 'action', 'status']) &&
+             data.keys().hasOnly(['userId', 'userEmail', 'role', 'action', 'timestamp', 'status']) &&
+             data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+             data.userEmail is string && data.userEmail.size() <= 256 &&
+             data.action is string && data.action.size() <= 64 &&
+             data.status is string && data.status.size() <= 32 &&
+             (!('role' in data) || (data.role is string && data.role.size() <= 32)) &&
+             (!('timestamp' in data) || (data.timestamp is string && data.timestamp.size() <= 64));
+    }
+
+    // User profile collection
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isValidId(userId) && isOwner(userId) && isValidUserProfile(incoming()) &&
+                    incoming().uid == existing().uid &&
+                    incoming().email == existing().email;
+      allow delete: if isValidId(userId) && isOwner(userId);
+      allow list: if false; // Blanket user listing forbidden
+    }
+
+    // Audit logs collection
+    match /audit_logs/{logId} {
+      allow get: if isValidId(logId) && isVerifiedUser() && existing().userId == request.auth.uid;
+      allow create: if isValidId(logId) && isVerifiedUser() && isValidAuditLog(incoming());
+      allow update, delete: if false; // Audit logs are immutable and append-only
+      allow list: if isVerifiedUser() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

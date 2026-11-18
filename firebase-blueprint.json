@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and authorization details for GEOCIENCES S.A.C.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "isAuthorized": { "type": "boolean" },
+        "authorizedRole": { "type": "string", "maxLength": 32 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "isAuthorized"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Access log entries recording role access and sign-in operations",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "maxLength": 32 },
+        "action": { "type": "string", "maxLength": 64 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["userId", "userEmail", "action", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "Private user profile information"
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "AuditLog" },
+      "description": "System access and authentication audit log entries"
+    }
+  }
+}
